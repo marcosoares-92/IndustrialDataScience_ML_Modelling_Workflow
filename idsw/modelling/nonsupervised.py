@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import tensorflow as tf
 
-from idsw.datafetch.core import InvalidInputsError
+from idsw import (InvalidInputsError, ControlVars)
 from .core import AnomalyDetector
 
 
@@ -66,23 +66,28 @@ def distances_between_each_data_point (df_tensor_or_array, list_of_new_arrays_to
             if (what_to_compare == 'only_new_with_original'):
 
                 distance_matrix = cdist(df, new_data, metric = distance_metrics)
-                print("Distances between new data points and the original ones were calculated and returned as distance_matrix.\n")
+                if ControlVars.show_results:
+                    print("Distances between new data points and the original ones were calculated and returned as distance_matrix.\n")
             
             elif (what_to_compare == 'everything'):
                 # https://numpy.org/doc/stable/reference/generated/numpy.row_stack.html
                 df = np.row_stack((df, new_data))
 
                 distance_matrix = pdist(df, metric = distance_metrics)
-                print("New data points added to the the dataset.")
-                print("Distances between each point on the dataset were calculated and returned as distance_matrix.\n")
-    
+                if ControlVars.show_results:
+                    print("New data points added to the the dataset.")
+                    print("Distances between each point on the dataset were calculated and returned as distance_matrix.\n")
+        
     else:
-        print(f"Mode set as what_to_compare = 'only_original_array'.")
+        if ControlVars.show_results:
+            print(f"Mode set as what_to_compare = 'only_original_array'.")
         distance_matrix = pdist(df, metric = distance_metrics)
-        print("Distances between each point on the dataset were calculated and returned as distance_matrix.\n")
+        if ControlVars.show_results:
+            print("Distances between each point on the dataset were calculated and returned as distance_matrix.\n")
 
-    print("Check the 10 first rows from the returned distance matrix:\n")
-    print(distance_matrix[:10])
+    if ControlVars.show_results:
+        print("Check the 10 first rows from the returned distance matrix:\n")
+        print(distance_matrix[:10])
 
     return distance_matrix
 
@@ -131,11 +136,12 @@ def kmeans_elbow_method (X_tensor, max_number_of_clusters_to_test = 100, number_
     RANDOM_STATE = 55 
     ## We will pass it to every sklearn call so we ensure reproducibility (i.e., a new random process)
     
-    print("Let's evaluate and compare the inertia.")
-    print("Here, inertia is defined as the sum of squared distances of samples to their closest cluster center, weighted by the sample weights.")
-    print("In the elbow or knee method, we plot the inertia against the number of clusters that resulted in such inertia.")
-    print("The number of clusters correspondent to the knee or elbow in the plot (sudden decay of derivative) is took as the ideal number of clusters to use.")
-    print("Andrew Ng in his Machine Learning Specialization (Coursera and Stanford University Online) presents several restrictions against its method, which is far from being perfect.\n")
+    if ControlVars.show_results:
+        print("Let's evaluate and compare the inertia.")
+        print("Here, inertia is defined as the sum of squared distances of samples to their closest cluster center, weighted by the sample weights.")
+        print("In the elbow or knee method, we plot the inertia against the number of clusters that resulted in such inertia.")
+        print("The number of clusters correspondent to the knee or elbow in the plot (sudden decay of derivative) is took as the ideal number of clusters to use.")
+        print("Andrew Ng in his Machine Learning Specialization (Coursera and Stanford University Online) presents several restrictions against its method, which is far from being perfect.\n")
 
     X = np.array(X_tensor)
     # Check if it is a single-dimension array
@@ -179,93 +185,95 @@ def kmeans_elbow_method (X_tensor, max_number_of_clusters_to_test = 100, number_
 
     # Let's put a small degree of transparency (1 - OPACITY) = 0.05 = 5%
     # so that the bars do not completely block other views.
-    OPACITY = 0.95
+    if ControlVars.show_plots:
+        OPACITY = 0.95
+        
+        print("Check the elbow plot below:\n")
+
+        #Set image size (x-pixels, y-pixels) for printing in the notebook's cell:
+        fig = plt.figure(figsize = (12, 8))
+        ax = fig.add_subplot()
+        
+        #ROTATE X AXIS IN XX DEGREES
+        plt.xticks(rotation = x_axis_rotation)
+        # XX = 0 DEGREES x_axis (Default)
+        #ROTATE Y AXIS IN XX DEGREES:
+        plt.yticks(rotation = y_axis_rotation)
+        # XX = 0 DEGREES y_axis (Default)
+        
+        # Set graphic title
+        ax.set_title(plot_title)
+        ax.set_xlabel(horizontal_axis_title)
+        ax.set_ylabel(vertical_axis_title)
+
+        # Scatter plot of time series:
+        ax.plot(x, y, linestyle = "-", marker = 'o', color = 'crimson', alpha = OPACITY)
+        # Axes.plot documentation:
+        # https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.plot.html?msclkid=42bc92c1d13511eca8634a2c93ab89b5
+                
+        # x and y are positional arguments: they are specified by their position in function
+        # call, not by an argument name like 'marker'.
+                
+        # Matplotlib markers:
+        # https://matplotlib.org/stable/api/markers_api.html?msclkid=36c5eec5d16011ec9583a5777dc39d1f
+        
+        # Now we finished plotting all of the series, we can set the general configuration:
+        ax.grid(grid) # show grid or not
+
+        if (export_png == True):
+            # Image will be exported
+            import os
+
+            #check if the user defined a directory path. If not, set as the default root path:
+            if (directory_to_save is None):
+                #set as the default
+                directory_to_save = ""
+
+            #check if the user defined a file name. If not, set as the default name for this
+            # function.
+            if (file_name is None):
+                #set as the default
+                file_name = "KMeans_elbow_plot"
+
+            #check if the user defined an image resolution. If not, set as the default 110 dpi
+            # resolution.
+            if (png_resolution_dpi is None):
+                #set as 330 dpi
+                png_resolution_dpi = 330
+
+            #Get the new_file_path
+            new_file_path = os.path.join(directory_to_save, file_name)
+            new_file_path = new_file_path + ".png"
+            # supported formats = 'png', 'pdf', 'ps', 'eps' or 'svg'
+            #Export the file to this new path:
+            plt.savefig(new_file_path, dpi = png_resolution_dpi, transparent = False) 
+            # https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.savefig.html
+            print (f"Figure exported as \'{new_file_path}\'. Any previous file in this root path was overwritten.")
+        
+        #Set image size (x-pixels, y-pixels) for printing in the notebook's cell:
+        #plt.figure(figsize = (12, 8))
+        #fig.tight_layout()
+
+        ## Show an image read from an image file:
+        ## import matplotlib.image as pltimg
+        ## img=pltimg.imread('mydecisiontree.png')
+        ## imgplot = plt.imshow(img)
+        ## See linkedIn Learning course: "Supervised machine learning and the technology boom",
+        ##  Ex_Files_Supervised_Learning, Exercise Files, lesson '03. Decision Trees', '03_05', 
+        ##  '03_05_END.ipynb'
+        plt.show()
     
-    print("Check the elbow plot below:\n")
-
-    #Set image size (x-pixels, y-pixels) for printing in the notebook's cell:
-    fig = plt.figure(figsize = (12, 8))
-    ax = fig.add_subplot()
-    
-    #ROTATE X AXIS IN XX DEGREES
-    plt.xticks(rotation = x_axis_rotation)
-    # XX = 0 DEGREES x_axis (Default)
-    #ROTATE Y AXIS IN XX DEGREES:
-    plt.yticks(rotation = y_axis_rotation)
-    # XX = 0 DEGREES y_axis (Default)
-    
-    # Set graphic title
-    ax.set_title(plot_title)
-    ax.set_xlabel(horizontal_axis_title)
-    ax.set_ylabel(vertical_axis_title)
-
-    # Scatter plot of time series:
-    ax.plot(x, y, linestyle = "-", marker = 'o', color = 'crimson', alpha = OPACITY)
-    # Axes.plot documentation:
-    # https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.plot.html?msclkid=42bc92c1d13511eca8634a2c93ab89b5
-            
-    # x and y are positional arguments: they are specified by their position in function
-    # call, not by an argument name like 'marker'.
-            
-    # Matplotlib markers:
-    # https://matplotlib.org/stable/api/markers_api.html?msclkid=36c5eec5d16011ec9583a5777dc39d1f
-    
-    # Now we finished plotting all of the series, we can set the general configuration:
-    ax.grid(grid) # show grid or not
-
-    if (export_png == True):
-        # Image will be exported
-        import os
-
-        #check if the user defined a directory path. If not, set as the default root path:
-        if (directory_to_save is None):
-            #set as the default
-            directory_to_save = ""
-
-        #check if the user defined a file name. If not, set as the default name for this
-        # function.
-        if (file_name is None):
-            #set as the default
-            file_name = "KMeans_elbow_plot"
-
-        #check if the user defined an image resolution. If not, set as the default 110 dpi
-        # resolution.
-        if (png_resolution_dpi is None):
-            #set as 330 dpi
-            png_resolution_dpi = 330
-
-        #Get the new_file_path
-        new_file_path = os.path.join(directory_to_save, file_name)
-        new_file_path = new_file_path + ".png"
-        # supported formats = 'png', 'pdf', 'ps', 'eps' or 'svg'
-        #Export the file to this new path:
-        plt.savefig(new_file_path, dpi = png_resolution_dpi, transparent = False) 
-        # https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.savefig.html
-        print (f"Figure exported as \'{new_file_path}\'. Any previous file in this root path was overwritten.")
-    
-    #Set image size (x-pixels, y-pixels) for printing in the notebook's cell:
-    #plt.figure(figsize = (12, 8))
-    #fig.tight_layout()
-
-    ## Show an image read from an image file:
-    ## import matplotlib.image as pltimg
-    ## img=pltimg.imread('mydecisiontree.png')
-    ## imgplot = plt.imshow(img)
-    ## See linkedIn Learning course: "Supervised machine learning and the technology boom",
-    ##  Ex_Files_Supervised_Learning, Exercise Files, lesson '03. Decision Trees', '03_05', 
-    ##  '03_05_END.ipynb'
-    plt.show()
-    
-    print("\n")
-    print("Check the summary dataframe with the number of clusters and correspondent inertia:\n")
-    
-    try:
-        # only works in Jupyter Notebook:
-        from IPython.display import display
-        display(elbow_df)
-            
-    except: # regular mode
-        print(elbow_df)
+    if ControlVars.show_results:
+        print("\n")
+        print("Check the summary dataframe with the number of clusters and correspondent inertia:\n")
+        
+        try:
+            # only works in Jupyter Notebook:
+            from IPython.display import display
+            display(elbow_df)
+                
+        except: # regular mode
+            print(elbow_df)
 
     return elbow_df
 
@@ -329,16 +337,17 @@ def kmeans_clustering (X_tensor, number_of_clusters = 8, number_of_initializatio
     # obtain clusters centroids:
     centroids = kmeans_model.cluster_centers_
 
-    print("Finished obtaining the K-Means cluster model.")
-    print("The model object that may be used for predicting the clusters for new data was returned as kmeans_model.")
-    print("The labels (clusters) correspondent to each entry in the input tensor was returned as X_labels, and the model's centroids were returned as centroids.")
-    print("Notice that the response predicted by the model is simply the cluster for a given entry.\n")
+    if ControlVars.show_results:
+        print("Finished obtaining the K-Means cluster model.")
+        print("The model object that may be used for predicting the clusters for new data was returned as kmeans_model.")
+        print("The labels (clusters) correspondent to each entry in the input tensor was returned as X_labels, and the model's centroids were returned as centroids.")
+        print("Notice that the response predicted by the model is simply the cluster for a given entry.\n")
 
-    print("Check the centroids of the clusters:\n")
-    print(centroids)
-    print("\n")
-    print("Check the 10 first entries from the dataset and the correspondent labels (clusters):\n")
-    print(f"{[tuple for tuple in zip(X[:10], X_labels[:10])]}")
+        print("Check the centroids of the clusters:\n")
+        print(centroids)
+        print("\n")
+        print("Check the 10 first entries from the dataset and the correspondent labels (clusters):\n")
+        print(f"{[tuple for tuple in zip(X[:10], X_labels[:10])]}")
 
     return kmeans_model, X_labels, centroids
 
@@ -372,13 +381,185 @@ def anomaly_detection (X_tensor, defined_threshold = 0.00001, X_test = None, y_t
         anomaly_detection_model = anomaly_detection_model.calculate_probabilities(X_tensor = X_test)
         anomaly_detection_model = anomaly_detection_model.select_threshold(y_val = y_test, p_val = detector.estimated_probabilities)
         array_of_outliers = np.array(anomaly_detection_model.predict(X_tensor = X))
-        print(f"Found {np.sum(outliers)} in the array X_tensor.")
-        print("The outliers are the elements correspondent to label 1 in the returned array named as 'outliers'.\n")
+        if ControlVars.show_results:
+            print(f"Found {np.sum(outliers)} in the array X_tensor.")
+            print("The outliers are the elements correspondent to label 1 in the returned array named as 'outliers'.\n")
 
     else:
         # Apply user defined threshold
         outliers = detector.predict(X_tensor = X_tensor)
-        print(f"Found {np.sum(outliers)} in the array X_tensor.")
-        print("The outliers are the elements correspondent to label 1 in the returned array named as 'outliers'.\n")
-    
+        if ControlVars.show_results:
+            print(f"Found {np.sum(outliers)} in the array X_tensor.")
+            print("The outliers are the elements correspondent to label 1 in the returned array named as 'outliers'.\n")
+        
     return anomaly_detection_model, outliers
+
+
+def check_financial_outliers (df, column_to_analyze, diff_alert_threshold = 20,
+                       horizontal_axis_title = None, vertical_axis_title = None, plot_title = None, x_axis_rotation = 0, 
+                       y_axis_rotation = 0, grid = True, export_png = False, directory_to_save = None, file_name = None, 
+                       png_resolution_dpi = 330):
+    """
+    Check the presence of FINANCIAL OUTLIERS through Benford's Law
+    
+    https://www.journalofaccountancy.com/issues/2017/apr/excel-and-benfords-law-to-detect-fraud.html
+    
+    Briefly explained, Benford's Law maintains that the numeral 1 will be the leading digit in a genuine
+    data set of numbers 30.1% of the time; the numeral 2 will be the leading digit 17.6% of the time; 
+    and each subsequent numeral, 3 through 9, will be the leading digit with decreasing frequency. 
+    This expected occurrence of leading digits can be illustrated as shown in the chart "Benford's Law."
+    
+    : param: df (pd.DataFrame): Dataframe with values to be analyzed.
+    
+    : param: column_to_analyze (str): column with the values to be analyzed.
+    
+    : param: difference_alert (float): percent of deviation from the curve to add an alert. Example: if difference_alert = 20,
+        a difference between the percent of leading digit occurence and the expected from the curve of 20% will be sufficient
+        for labelling the entry as 'potential_outlier'. Else, label will be 'below_threshold'.
+    
+    Returns:
+        dataset containing counts of occurences of leading digits, percent of occurence, theoretical percent from Benford curve,
+        difference in percent between actual and theoretical values, and label if it is a potential outlier, considering the
+        threshold set as diff_alert_threshold.
+        
+        outliers_df, a smaller dataframe containing only the data labelled as potential outliers (digit and % of occurrence).
+    """
+    
+    # total entries on the dataset
+    total = len(df)
+    
+    # Expected Benford curve, with values in percent (key: leading digit, value: expected percent of occurrence)
+    expected_curve = {0: 0.0, 1: 30.1, 2: 17.6, 3: 12.5, 4: 9.7, 5: 7.9, 6: 6.7, 7: 5.8, 8: 5.1, 9: 4.6}
+    
+    # Create a local copy of the dataset to manipulate
+    dataset = df.copy(deep = True)
+    
+    # Extract the first character and count the occurences
+    # convert to string and apply a lambda function that extracts the first character from a str x
+    dataset['leading_digit'] = dataset[column_to_analyze].astype(str).apply(lambda x: x[0])
+    # Since the object is a Pandas series, the axis = 1 (rows) is implicit for the apply method.
+    
+    dataset = dataset.groupby(by = 'leading_digit', as_index = False, sort = True).count()
+    
+    dataset = dataset.rename(columns = {column_to_analyze: 'counts'})
+    
+    # leading digit can be reconverted to integer, to save memory on the dataframe:
+    dataset['leading_digit'] = dataset['leading_digit'].astype(int)
+    
+    # Round to 1 digit, such as the Benford curve
+    dataset['digits_pct'] = np.round((np.array(dataset.counts) / total * 100), 1)
+    
+    # Add a column with the expected_curve: access the index given by 'digit' and the correspondent value on the
+    # dictionary expected_curve. Here, as the whole table is manipulated, parameter axis = 1 must be passed to the
+    # apply method, avoiding the imputation to a whole column.
+    dataset['benford'] = dataset.apply(lambda x: expected_curve[x.leading_digit], axis = 1)
+    
+    # Calculate the difference between theoretical and actual percent (absolute value):
+    dataset['pct_diff'] = np.round((abs(dataset['digits_pct'] - dataset['benford'])/dataset['benford'] * 100), 2)
+    dataset['label'] = np.where(dataset['pct_diff'] >= diff_alert_threshold, 'potential_outlier', 'below_threshold')
+    
+    # Let's create a outliers_df containing only data marked as potential outliers:
+    outliers_df = dataset.copy(deep = True)
+    # Filter potential outliers
+    outliers_df = outliers_df[outliers_df['label'] == 'potential_outlier']
+    # keep only the columns digit and % of occurrence
+    outliers_df = outliers_df[['leading_digit', 'digits_pct']]
+     
+    if ControlVars.show_results:
+        print("Successfully calculated and returned the dataset comparing the digits with Benford's Law, as well as a dataframe containing only data labelled as potential outliers:\n")
+        
+        try:
+            # only works in Jupyter Notebook:
+            from IPython.display import display
+            display(dataset)
+                
+        except: # regular mode
+            print(dataset)
+        
+    
+    # Now the data is prepared and we only have to plot 
+    
+    # Let's put a small degree of transparency (1 - OPACITY) = 0.05 = 5%
+    # so that the bars do not completely block other views.
+    if ControlVars.show_plots:
+        OPACITY = 0.95
+        
+        # Set labels and titles for the case they are None
+        if (plot_title is None):
+            
+            plot_title = f"Percent_of_leading_digits"
+        
+        if (horizontal_axis_title is None):
+
+            horizontal_axis_title = 'leading_digit'
+
+        if (vertical_axis_title is None):
+            # Notice that response_var_name already has the suffix indicating the
+            # aggregation function
+            vertical_axis_title = '% of occurence'
+        
+        fig, ax = plt.subplots(figsize = (12, 8))
+        # Set image size (x-pixels, y-pixels) for printing in the notebook's cell:
+
+        #ROTATE X AXIS IN XX DEGREES
+        plt.xticks(rotation = x_axis_rotation)
+        # XX = 70 DEGREES x_axis (Default)
+        #ROTATE Y AXIS IN XX DEGREES:
+        plt.yticks(rotation = y_axis_rotation)
+        # XX = 0 DEGREES y_axis (Default)
+        
+        plt.title(plot_title)
+        
+        ax.set_xlabel(horizontal_axis_title)
+        ax.set_ylabel(vertical_axis_title, color = 'darkblue')
+
+        ax.bar(dataset['leading_digit'], dataset['digits_pct'], color = 'darkblue', alpha = OPACITY, label = 'digits_pct')
+
+        ax.plot(dataset['leading_digit'], dataset['benford'], color = 'fuchsia', linestyle = 'dashed', alpha = OPACITY, label = "Benford's Law\nTheoretical Percent (%)")
+        
+        
+        # If there are red points labelled as potential outliers, plot them above the graph
+        # (plot as scatter plot, with no spline, and 100% opacity = 1.0):
+        if (len(outliers_df) > 0):
+            
+            ax.plot(outliers_df['leading_digit'], outliers_df['digits_pct'], linestyle = '', marker = 'o', color = 'firebrick', alpha = 1.0, label = "Potential\nOutlier")
+        
+        ax.legend()
+        ax.grid(grid) # shown if user set grid = True
+        # If user wants to see the grid, it is shown only for the cumulative line.
+
+        if (export_png == True):
+            # Image will be exported
+            import os
+            
+            #check if the user defined a directory path. If not, set as the default root path:
+            if (directory_to_save is None):
+                #set as the default
+                directory_to_save = ""
+            
+            #check if the user defined a file name. If not, set as the default name for this
+            # function.
+            if (file_name is None):
+                #set as the default
+                file_name = "benford_check"
+            
+            #check if the user defined an image resolution. If not, set as the default 110 dpi
+            # resolution.
+            if (png_resolution_dpi is None):
+                #set as 330 dpi
+                png_resolution_dpi = 330
+            
+            #Get the new_file_path
+            new_file_path = os.path.join(directory_to_save, file_name)
+            new_file_path = new_file_path + ".png"
+            # supported formats = 'png', 'pdf', 'ps', 'eps' or 'svg'
+            #Export the file to this new path:
+            plt.savefig(new_file_path, dpi = png_resolution_dpi, transparent = False) 
+            # https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.savefig.html
+            print (f"Figure exported as \'{new_file_path}\'. Any previous file in this root path was overwritten.")
+    
+        plt.show()
+    
+    
+    return dataset, outliers_df
+
